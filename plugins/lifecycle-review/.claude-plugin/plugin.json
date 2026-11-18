@@ -1,0 +1,6 @@
+{
+  "name": "lifecycle-review",
+  "version": "0.3.0",
+  "description": "Understand the Trakk Lifecycle costing model and review a model export — structural validation, referential integrity, a recomputed renewal forecast, multi-scenario comparison and a decision pack. The model engine is delivered separately; run `doctor` to see where the skill expects it.",
+  "author": { "name": "Trakk Assets", "url": "https://trakkassets.com" }
+}

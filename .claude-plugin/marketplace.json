@@ -1,0 +1,17 @@
+{
+  "name": "am-skills",
+  "owner": {
+    "name": "TrakkAssets",
+    "url": "https://github.com/TrakkAssets"
+  },
+  "plugins": [
+    {
+      "name": "lifecycle-review",
+      "source": "./plugins/lifecycle-review",
+      "description": "Review, re-cost and scenario-model a Trakk Lifecycle model export — validate it, recompute the forecast with the app's own costing logic, compare scenarios, produce a decision pack.",
+      "version": "0.3.0",
+      "keywords": ["asset-management", "lifecycle", "renewal", "forecast", "infrastructure", "trakk"],
+      "category": "data"
+    }
+  ]
+}
