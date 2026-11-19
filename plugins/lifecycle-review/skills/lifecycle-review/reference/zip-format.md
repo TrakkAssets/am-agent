@@ -13,15 +13,21 @@ Produced by **Export model (.zip)** on the Import/Export panel (admin only).
 | `unitRates.csv` | round-trip | `code` | The org's unit-rate library |
 | `assets.csv` | round-trip* | `assetID` | Asset register snapshot |
 | `model.csv` | **export only** | `assetID` | The engine's computed results |
+| `renewalClasses.csv` | export only | `name` | Renewal-class defaults + type keys (exports ≥ 2026-11-18) |
+| `costIndex.csv` | export only | `date` | The escalation series (exports ≥ 2026-11-18) |
+| `assetSchema.csv` | export only | `type_key` | Label↔key bridge, **frozen at two columns** (exports ≥ 2026-11-18) |
+| `schema.json` | export only | — | The merged-schema profile (exports ≥ 2026-11-19) — see below |
+| `trakk-config.yaml` | export only | — | Export metadata: app type/version, counts, `schemaVersion` |
 
 \* `assets.csv` is re-imported only when the org has `allowDirectEdits`; it is
 skipped otherwise, and even then only the editable attribute subset is written
 back.
 
-The ZIP does **not** carry the renewal classes, the asset-type mapping, the cost
-index, or the org's parent-mode default. Those are separate per-screen CSV
-exports — and the first three are exactly what the cost engine needs, so without
-them a forecast cannot be recomputed. See **Reference tables** at the end.
+**Exports before 2026-11-18** carry only the first five members — no renewal
+classes, no cost index, no schema bridge — and the first two are exactly what the
+cost engine needs, so without them a forecast cannot be recomputed. For those,
+supply the tables as separate per-screen CSV exports alongside the five members;
+see **Reference tables** at the end.
 
 ## renewal.csv
 
@@ -80,7 +86,7 @@ Many rows per asset — one per schedule.
 |---|---|
 | `assetID` | Primary key |
 | `parent` | FK to another `assetID`; blank for a root |
-| `type` | Asset type key; resolves to a renewal class |
+| `type` | The type's **display label** (`Pipe Fitting - End`), not its key. Resolve it through `schema.json` / `assetSchema.csv` before matching `renewalClasses.types` |
 | `label` | Display name |
 | `ds_inst` | Install date. Year taken from the first four digits. Inherited from the nearest ancestor when blank |
 | `c_inst` | Capital cost at install — the RESIDUAL method's input |
@@ -99,7 +105,7 @@ review tool cross-checks the two and reports the drift (`E01`).
 
 | Column | Notes |
 |---|---|
-| `assetID`, `label`, `type`, `parent` | Denormalised from the register |
+| `assetID`, `label`, `type`, `parent` | Denormalised from the register — `type` is the display label, as in `assets.csv` |
 | `status` | `green` \| `yellow` \| `red` \| `rollup` |
 | `cost_method` | The method actually used |
 | `renewal_class` | Resolved class name; blank when the type is unmapped |
@@ -110,12 +116,28 @@ review tool cross-checks the two and reports the drift (`E01`).
 | `included` | `true` / `false` — whether the asset is in the forecast total |
 | `excluded_reason` | Which inclusion rule fired |
 
+## schema.json — the merged-schema profile
+
+Exports from 2026-11-19 on carry the **full merged schema** as JSON: `setup`,
+`common`, `attributes` (datatypes, descriptions, list refs), `types` (template +
+`addAttrib` — the type→attribute filter), `templates`, and `lists` (the
+enumerations). `schemaVersion` identifies the profile shape and is echoed in
+`trakk-config.yaml`. This is the same artefact Trakk Assets' "Export merged
+schema JSON" emits — the schema is a nested graph, and carrying it whole is what
+lets a tool understand the client's data model rather than just its labels.
+
+For type resolution the engine reads `schema.json`'s `types` **first**, then
+`assetSchema.csv`; on disagreement `schema.json` wins (same provenance, richer
+source). `assetSchema.csv` stays frozen at two columns as the bridge for older
+exports and tooling — it will not grow.
+
 ## Reference tables
 
-Not in the ZIP. Each is a separate per-screen export. Supply them as extra CSVs
-in the same folder as the five members — the loader picks them up by name, and
-accepts several spellings (`costIndex.csv`, `cost-index.csv`, `price-index.csv`;
-`assetSchema.csv`, `asset-schema.csv`).
+In the ZIP since 2026-11-18; before that, each was a separate per-screen export.
+For an older export, supply them as extra CSVs in the same folder as the five
+members — the loader picks them up by name, and accepts several spellings
+(`costIndex.csv`, `cost-index.csv`, `price-index.csv`; `assetSchema.csv`,
+`asset-schema.csv`).
 
 ### costIndex.csv — `date,civil_index,plant_index`
 
@@ -159,9 +181,10 @@ fact, not a schema fact, and `renewalClasses.types[]` already owns that relation
 — keeping it out leaves exactly one place the type→class relation lives.
 
 Kelly, 2026-11-17: *"a basic assetSchema.csv being a limited extract of the merged
-schema aligns better with our architecture and allows future flexibility."*
-Expect it to grow (unit attributes, option lists, parent type) without the
-existing columns changing.
+schema aligns better with our architecture and allows future flexibility."* That
+flexibility now lives in `schema.json`, which carries the full merged schema as a
+nested graph. **This table will not grow** — it is frozen at two columns as the
+back-compat bridge for exports and tooling that predate `schema.json`.
 
 **Its failure mode is staleness.** Because the schema now travels in its own
 table rather than on each asset row, the register and the extract can be

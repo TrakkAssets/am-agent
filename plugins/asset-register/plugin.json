@@ -1,0 +1,14 @@
+{
+  "name": "asset-register",
+  "description": "Build a Trakk-shaped asset register from BYO spreadsheets or legacy exports — profile your data, map columns, infer a parent hierarchy, validate, and emit a register ready for the lifecycle skill and the app importer.",
+  "version": "0.1.0",
+  "keywords": ["asset-management", "onboarding", "register", "spreadsheet", "hierarchy", "trakk"],
+  "category": "data",
+  "skills": [
+    {
+      "name": "asset-register",
+      "source": "./skills/asset-register",
+      "entrypoint": "SKILL.md"
+    }
+  ]
+}

@@ -82,3 +82,16 @@ diffed. Severity means:
 | `E04` | warn | An included asset has no renewal class | No class defaults for life or residual, and unit-rate matching reports `no-type-code`, so UNIT cannot work for it |
 | `E05` | info | No cost index was supplied | Maintenance costs are nominal, in the dollars of their `cost_basis_yr`, and the engine cannot run at all. Pass `--price-index <csv>` |
 | `E06` | warn | `model.csv` has `renewal_class` blank on every row, but the classes do resolve | A defect in the exporter, not bad data: the column is left blank for a register whose types are display labels. The exported **costs** are unaffected — only the column is. Fixed in app exports from 2026-11 onward |
+
+## Findings introduced by `edit` and `rebuild`
+
+After `edit` writes changes, the tool re-validates automatically and reports any **new** findings the write introduced. Watch for:
+
+| Finding | Why an edit can introduce it |
+|---|---|
+| `R06` | `preferred_rate_code` set to a code that is not in `unitRates.csv`. The asset will fall back to auto-matching |
+| `D01`–`D03` | A `cost_method`, `model_level`, or `confidence` value outside its allowed domain. The field reverts to a default on the next forecast |
+| `E01` | `model.csv` is always stale after `edit` and before `rebuild` — this finding fires until `rebuild` runs |
+| `E03` | Setting `exp_life` to blank or zero makes the asset red |
+
+The backup in `_backup_<ISO>/` is the recovery path. If an edit introduced an error, restore the backup files.

@@ -99,6 +99,9 @@ user to export the Asset Type Mapping screen.
 | `parity <in>` | Engine vs the app's own `model.csv`, asset by asset. Run it before trusting a recomputed number on an unfamiliar export. |
 | `csv <in> <table> [--where col=value] [--limit N]` | Pull one table out to grep or quote. |
 | `asset <in> <assetID>` | One asset across every table, plus its resolved class, pinned rate, engine detail and children. Reach for this the moment a question is about a specific asset. |
+| `edit <in> --where k=v --set k=v [--dry-run]` | Write plan or asset field changes back to the folder. See below. |
+| `edit <in> --from-scenario FILE --scenario "Name" [--dry-run]` | Commit a named scenario from a set as the new baseline. |
+| `rebuild <in>` | Regenerate `model.csv` from the cost engine. Run after `edit`. |
 
 Window options throughout: `--years N` (default 30), `--start YYYY` (default
 this year), `--bin N` (default 5). `--app-model` reads the app's `model.csv`
@@ -161,6 +164,35 @@ working. An existing config is merged, not clobbered, so the app's own metadata 
 
 `inspect` lists the map when one is present, so you can see what scenarios a folder holds
 before opening anything.
+
+### Committing a scenario as the new baseline
+
+The natural progression is: model a scenario → compare it → decide to keep it. When a scenario is chosen, commit it and regenerate the forecast:
+
+```bash
+node bin/lifecycle.mjs edit <in> --from-scenario set.json --scenario "Extended pipe life"
+node bin/lifecycle.mjs rebuild <in>
+```
+
+`edit` writes the scenario's plan changes back to `renewal.csv` (and `assets.csv` if the scenario touches asset fields). `rebuild` regenerates `model.csv` from the updated plans. After both commands, the folder reflects the new baseline — `inspect` and `report` will show the committed numbers.
+
+You can also commit a one-off field change without a scenario file:
+
+```bash
+node bin/lifecycle.mjs edit <in> --where 'renewal_class=Pipework & Conduits' --set exp_life=120
+node bin/lifecycle.mjs rebuild <in>
+```
+
+**Safety rules — these matter because there is no undo:**
+
+- Always `--dry-run` first. It prints exactly what would change (matched count, example asset IDs) without writing anything.
+- The tool backs up `renewal.csv`, `maintenance.csv`, `assets.csv` and `trakk-config.yaml` to a timestamped `_backup_<ISO>/` folder before the first write of a session. Keep these.
+- After any `edit`, `model.csv` is stale. Run `rebuild` before quoting a forecast number.
+- `rebuild` refuses when the cost index is missing. It will not write a model.csv full of zeroes over a good one.
+- **Only a folder of CSVs can be edited.** A ZIP is read-only. If the user has a ZIP, unpack it first.
+- The writable fields are: plan fields (`exp_life`, `rep_year`, `residual_pct`, `cost_method`, `manual_cost`, `cost_year`, `confidence`, `model_level`, `preferred_rate_code`, `plan_comment`) and selected asset attributes (`label`, `man`, `mod`, `ser`, `ds_inst`, `opstat`, `crit`, `description`, `c_inst`, `replace_cost`). `assetID`, `parent`, and `type` are structural and cannot be changed here.
+
+**When to loop in the app instead:** changing an asset's type, moving it in the hierarchy, or merging registers — those are the app's job. The app has the full re-keying and audit trail infrastructure; this tool does not.
 
 ### Exporting a scenario
 
@@ -228,17 +260,13 @@ Work down in this order; stopping early wastes the user's time on symptoms.
 
 ## What this tool does not do
 
-- **It does not write anything back.** There is no import path here. To change a
-  model, edit the CSVs and use the app's **Import model (.zip)**. Scenarios live
-  in memory for the length of one command.
+- **It does not write to ZIPs.** The `edit` and `rebuild` commands require a folder of CSVs — a ZIP is read-only. Unpack it with `unzip` before editing.
 - **It does not read `schema.merged`.** The display-label → type-key map lives in
   the platform schema, which is why `assetTypeMapping.csv` has to come along.
 - **It does not know the org's parent-cost default.** the default is `exclude`; if the org has set a different
   one, pass it through a scenario or expect parent assets to be excluded where the app
   included them.
-- **It does not discount.** Costs are in today's dollars, undiscounted — as the
-  app forecasts them. There is no NPV here.
-- **It does not discount.** No NPV. See above.
+- **It does not discount.** Costs are in today's dollars, undiscounted — as the app forecasts them. There is no NPV.
 
 ## Status is tree-aware — do not report the per-asset one as the headline
 

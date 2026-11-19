@@ -3,8 +3,9 @@
 //
 // The skill is installable from a public repo (Claude marketplace) and carries only
 // instructions and domain documentation. The engine, the CLI and the checks live
-// separately — in the monorepo at `apps/lifecycle/offline-scripts/`, delivered to a
-// customer as a directory. This resolves that directory and hands over to it.
+// separately — in the monorepo at `apps/desktop-scripts/`, delivered to a customer as a
+// directory (built by its build.mjs, so the copy is zero-dependency plain node). This
+// resolves that directory and hands over to it.
 //
 // Until there is download infrastructure, "delivery" is: put the scripts somewhere and
 // point at them. Resolution order, first hit wins:
@@ -22,7 +23,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve, dirname } from 'node:path'
 import { homedir } from 'node:os'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ENV_VAR = 'TRAKK_LIFECYCLE_SCRIPTS'
@@ -31,12 +32,24 @@ const PROJECT_FILE = 'trakk-lifecycle.json'
 /** A scripts directory is only usable if it has both the CLI and the engine. */
 const REQUIRED = ['lifecycle.mjs', join('lib', 'engine.mjs'), join('lib', 'schema.mjs')]
 
+/** Deployments ≥ 2026-11-19 additionally ship vendor/trakk-schema.mjs and their
+ *  lib/refs.mjs imports it — such a copy without the vendor file would resolve and
+ *  then crash mid-run, so it is required exactly when the deployed engine wants it.
+ *  Older deployments have no vendor import and stay usable unchanged. */
+const VENDOR_BUNDLE = join('vendor', 'trakk-schema.mjs')
+
 function inspect(dir, origin, note) {
   // A candidate with no directory is still reported — "why didn't my env var work?"
   // is exactly the question doctor exists to answer.
   if (!dir) return { origin, path: null, exists: false, missing: [], usable: false, note }
   const path = resolve(dir)
   const missing = REQUIRED.filter((f) => !existsSync(join(path, f)))
+  const refsPath = join(path, 'lib', 'refs.mjs')
+  if (existsSync(refsPath) && !existsSync(join(path, VENDOR_BUNDLE))) {
+    try {
+      if (readFileSync(refsPath, 'utf8').includes('vendor/trakk-schema.mjs')) missing.push(VENDOR_BUNDLE)
+    } catch { /* unreadable refs.mjs will fail loudly at run time anyway */ }
+  }
   return {
     origin,
     path,
@@ -72,6 +85,8 @@ export function resolveScripts(explicit) {
   return { candidates, chosen: candidates.find((c) => c.usable) ?? null }
 }
 
+let loadResult = null
+
 function doctor({ candidates, chosen }) {
   const L = ['trakk-lifecycle — where are the model scripts?', '']
   for (const c of candidates) {
@@ -93,6 +108,7 @@ function doctor({ candidates, chosen }) {
     // The extended reference ships with the engine; the skill only has the concept guide.
     const ext = join(chosen.path, 'reference', 'model-extended.md')
     L.push(`Extended reference: ${existsSync(ext) ? ext : '(not present in this install)'}`)
+    L.push(`Load test: ${loadResult ?? 'not run'}`)
   } else {
     L.push('NOT RESOLVED — no candidate directory has the model scripts.')
     L.push('')
@@ -104,9 +120,9 @@ function doctor({ candidates, chosen }) {
     L.push('  mkdir -p ~/.trakk/lifecycle && cp -r /path/to/offline-scripts ~/.trakk/lifecycle/scripts')
     L.push('')
     L.push('A scripts directory must contain: ' + REQUIRED.join(', '))
+    L.push(`(current deployments also ship ${VENDOR_BUNDLE} — required when the engine imports it)`)
   }
-  process.stdout.write(L.join('\n') + '\n')
-  return chosen ? 0 : 3
+  return L.join('\n')
 }
 
 // --- main -------------------------------------------------------------------
@@ -124,7 +140,20 @@ for (let i = 0; i < argv.length; i++) {
 const resolved = resolveScripts(explicit)
 
 if (passthrough[0] === 'doctor' || passthrough[0] === 'where') {
-  process.exit(doctor(resolved))
+  // Actually load the engine. Reporting "resolved" without importing it is how doctor
+  // passed on Windows while every other command crashed (Percy, WWL, 2026-11-19).
+  if (resolved.chosen) {
+    try {
+      await import(pathToFileURL(join(resolved.chosen.path, 'lib', 'engine.mjs')).href)
+      loadResult = 'OK — the engine imports cleanly'
+    } catch (err) {
+      loadResult = `FAILED — resolved but will not import: ${err.message}`
+      process.stdout.write(doctor(resolved) + '\n')
+      process.exit(4)
+    }
+  }
+  process.stdout.write(doctor(resolved) + '\n')
+  process.exit(resolved.chosen ? 0 : 3)
 }
 
 if (!resolved.chosen) {
@@ -134,5 +163,10 @@ if (!resolved.chosen) {
 }
 
 // Rewrite argv so the CLI's own `process.argv.slice(2)` sees exactly its own arguments.
-process.argv = [process.argv[0], join(resolved.chosen.path, 'lifecycle.mjs'), ...passthrough]
-await import(join(resolved.chosen.path, 'lifecycle.mjs'))
+const entry = join(resolved.chosen.path, 'lifecycle.mjs')
+process.argv = [process.argv[0], entry, ...passthrough]
+
+// import() needs a file:// URL, not a path. On Windows a bare `C:\...` is rejected
+// outright, which broke every command except `doctor` for Windows users (Percy, WWL,
+// 2026-11-19). POSIX tolerated the bare path, which is why it shipped.
+await import(pathToFileURL(entry).href)

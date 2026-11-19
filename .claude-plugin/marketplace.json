@@ -12,6 +12,14 @@
       "version": "0.3.0",
       "keywords": ["asset-management", "lifecycle", "renewal", "forecast", "infrastructure", "trakk"],
       "category": "data"
+    },
+    {
+      "name": "asset-register",
+      "source": "./plugins/asset-register",
+      "description": "Build a Trakk-shaped asset register from BYO spreadsheets or legacy exports — profile columns, map to Trakk fields, infer a parent hierarchy, validate, and emit a register ready for the lifecycle-review skill and the Trakk app importer.",
+      "version": "0.1.0",
+      "keywords": ["asset-management", "onboarding", "register", "spreadsheet", "hierarchy", "trakk"],
+      "category": "data"
     }
   ]
 }
