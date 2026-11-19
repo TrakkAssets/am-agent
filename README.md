@@ -5,9 +5,12 @@ Asset-management skills for Claude, from [Trakk Assets](https://trakkassets.com)
 ## Install
 
 ```
-/plugin marketplace add TrakkAssets/am-skills
-/plugin install lifecycle-review@am-skills
+/plugin marketplace add TrakkAssets/am-agent
+/plugin install lifecycle-review@am-agent
 ```
+
+If `/plugin marketplace add` does not find it, open the marketplace interactively
+with `/plugin` and enter `TrakkAssets/am-agent` when prompted for a source.
 
 ## Skills
 
@@ -62,4 +65,4 @@ There is no NPV here.
 
 ## Support
 
-Issues and questions: <https://github.com/TrakkAssets/am-skills/issues>
+Issues and questions: <https://github.com/TrakkAssets/am-agent/issues>

@@ -1,5 +1,5 @@
 {
-  "name": "am-skills",
+  "name": "am-agent",
   "owner": {
     "name": "TrakkAssets",
     "url": "https://github.com/TrakkAssets"
@@ -8,17 +8,31 @@
     {
       "name": "lifecycle-review",
       "source": "./plugins/lifecycle-review",
-      "description": "Review, re-cost and scenario-model a Trakk Lifecycle model export — validate it, recompute the forecast with the app's own costing logic, compare scenarios, produce a decision pack.",
+      "description": "Review, re-cost and scenario-model a Trakk Lifecycle model export \u2014 validate it, recompute the forecast with the app's own costing logic, compare scenarios, produce a decision pack.",
       "version": "0.3.0",
-      "keywords": ["asset-management", "lifecycle", "renewal", "forecast", "infrastructure", "trakk"],
+      "keywords": [
+        "asset-management",
+        "lifecycle",
+        "renewal",
+        "forecast",
+        "infrastructure",
+        "trakk"
+      ],
       "category": "data"
     },
     {
       "name": "asset-register",
       "source": "./plugins/asset-register",
-      "description": "Build a Trakk-shaped asset register from BYO spreadsheets or legacy exports — profile columns, map to Trakk fields, infer a parent hierarchy, validate, and emit a register ready for the lifecycle-review skill and the Trakk app importer.",
+      "description": "Build a Trakk-shaped asset register from BYO spreadsheets or legacy exports \u2014 profile columns, map to Trakk fields, infer a parent hierarchy, validate, and emit a register ready for the lifecycle-review skill and the Trakk app importer.",
       "version": "0.1.0",
-      "keywords": ["asset-management", "onboarding", "register", "spreadsheet", "hierarchy", "trakk"],
+      "keywords": [
+        "asset-management",
+        "onboarding",
+        "register",
+        "spreadsheet",
+        "hierarchy",
+        "trakk"
+      ],
       "category": "data"
     }
   ]
