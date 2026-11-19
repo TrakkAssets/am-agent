@@ -1,4 +1,4 @@
-# am-skills
+# am-agent
 
 Asset-management skills for Claude, from [Trakk Assets](https://trakkassets.com).
 
